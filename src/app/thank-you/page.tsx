@@ -4,10 +4,12 @@ import { motion } from 'framer-motion'
 import { CheckCircle, Loader2, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useState } from 'react'
-import { useStoredData } from '@/lib/client-store'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Download } from 'lucide-react'
+import { readPendingOrder, useStoredData } from '@/lib/client-store'
 import { PLANS, isPlanId } from '@/lib/pricing'
 import { TYPES } from '@/lib/socionics'
+import { generateResultSections } from '@/lib/result-sections'
 
 function ThankYouContent() {
   const params = useSearchParams()
@@ -16,10 +18,72 @@ function ThankYouContent() {
   const [upsellSent, setUpsellSent] = useState(false)
   const [pending, setPending] = useState(false)
 
+  const [paymentId, setPaymentId] = useState<string | null>(null)
+  const [storedPlan, setStoredPlan] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+
+  useEffect(() => {
+    const order = readPendingOrder()
+    if (order) {
+      setPaymentId(order.paymentId)
+      setStoredPlan(order.plan)
+    }
+  }, [])
+
   const planParam = params.get('plan')
-  const plan = isPlanId(planParam) ? PLANS[planParam] : PLANS.full
+  const planId = isPlanId(planParam)
+    ? planParam
+    : isPlanId(storedPlan)
+      ? storedPlan
+      : 'full'
+  const plan = PLANS[planId]
   const type = data ? TYPES[data.type] : null
   const email = data?.email ?? ''
+
+  // Тот же построитель, что использует PDF в письме — страница и вложение
+  // всегда показывают одно и то же.
+  const sections = useMemo(
+    () => (data ? generateResultSections({ type: data.type }, planId) : []),
+    [data, planId],
+  )
+
+  async function handleDownloadPDF() {
+    if (!paymentId) {
+      setDownloadError(
+        'Не нашли номер платежа в этом браузере. Разбор отправлен тебе на почту.',
+      )
+      return
+    }
+
+    setDownloading(true)
+    setDownloadError('')
+
+    try {
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId }),
+      })
+
+      if (!response.ok) throw new Error(`PDF request failed with ${response.status}`)
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'tip-lichnosti.pdf'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      // Немедленный revoke в некоторых браузерах отменяет загрузку.
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    } catch {
+      setDownloadError('Не удалось скачать PDF. Он также отправлен тебе на почту.')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   function submitUpsell(event: React.FormEvent) {
     event.preventDefault()
@@ -51,7 +115,7 @@ function ThankYouContent() {
           className="mt-6 text-[26px] font-bold leading-snug sm:text-[32px]"
           style={{ color: 'var(--text-primary)' }}
         >
-          {email ? `${email}, твой` : 'Твой'} психологический портрет готовится
+          Оплата прошла успешно!
         </h1>
 
         {type ? (
@@ -70,9 +134,59 @@ function ThankYouContent() {
           className="mt-6 font-body text-[16px] leading-relaxed"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Пришлём {email ? `на ${email}` : 'на твою почту'} через {plan.delivery}.
-          Тариф: {plan.name}, {plan.format}.
+          Твой психологический портрет открыт ниже. Копия отправлена{' '}
+          {email ? `на ${email}` : 'на твою почту'}. Тариф: {plan.name}.
         </p>
+
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            disabled={downloading}
+            className="inline-flex items-center justify-center gap-2.5 rounded-xl px-7 py-3.5 font-semibold text-white disabled:opacity-60"
+            style={{ backgroundColor: 'var(--accent-teal)' }}
+          >
+            <Download size={18} aria-hidden />
+            {downloading ? 'Готовим PDF…' : 'Скачать PDF'}
+          </button>
+
+          {downloadError ? (
+            <p
+              className="mt-3 text-sm"
+              style={{ color: 'var(--accent-coral)' }}
+              role="alert"
+            >
+              {downloadError}
+            </p>
+          ) : null}
+        </div>
+
+        {sections.length > 0 ? (
+          <section className="mt-12 text-left" aria-label="Твой разбор">
+            <ul className="grid gap-4">
+              {sections.map((section) => (
+                <li
+                  key={section.title}
+                  className="rounded-2xl border bg-white p-6"
+                  style={{ borderColor: 'var(--border)' }}
+                >
+                  <h2
+                    className="text-[16px] font-bold"
+                    style={{ color: 'var(--accent-teal)' }}
+                  >
+                    {section.title}
+                  </h2>
+                  <p
+                    className="mt-2.5 font-body text-[15px] leading-relaxed whitespace-pre-line"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    {section.content}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <div
           className="mt-8 rounded-2xl border-2 p-6 text-left"

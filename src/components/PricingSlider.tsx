@@ -11,7 +11,13 @@ import {
   Users,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { WINDOW_MS, claimSpot, timerStart, useSpots } from '@/lib/client-store'
+import {
+  WINDOW_MS,
+  claimSpot,
+  savePendingOrder,
+  timerStart,
+  useSpots,
+} from '@/lib/client-store'
 import { PLANS, PLAN_ORDER, formatPrice } from '@/lib/pricing'
 
 type Props = {
@@ -89,6 +95,7 @@ export default function PricingSlider({ type, email }: Props) {
 
       const data = (await response.json()) as {
         confirmationUrl?: string
+        paymentId?: string
         error?: string
       }
 
@@ -97,6 +104,9 @@ export default function PricingSlider({ type, email }: Props) {
         setPending(false)
         return
       }
+
+      // Нужен /thank-you, чтобы подтвердить оплату при скачивании PDF.
+      savePendingOrder({ plan: plan.id, paymentId: data.paymentId ?? null })
 
       window.location.href = data.confirmationUrl
     } catch {

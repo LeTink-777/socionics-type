@@ -23,6 +23,53 @@ export type CreatePaymentResult = {
   confirmationUrl: string
 }
 
+export type FetchedPayment = {
+  id: string
+  status: string
+  metadata: Record<string, string>
+}
+
+/**
+ * Читает платёж по идентификатору.
+ *
+ * Нужен, чтобы подтвердить: запрос на скачивание относится к реально
+ * оплаченному заказу, и чтобы взять тип из самого платежа, а не из тела
+ * запроса браузера.
+ */
+export async function getPayment(paymentId: string): Promise<FetchedPayment | null> {
+  const secretKey = process.env.YUKASSA_SECRET_KEY
+
+  if (!SHOP_ID || !secretKey) {
+    throw new Error(
+      'ЮKassa не настроена: задайте NEXT_PUBLIC_YUKASSA_SHOP_ID и YUKASSA_SECRET_KEY',
+    )
+  }
+
+  const auth = Buffer.from(`${SHOP_ID}:${secretKey}`).toString('base64')
+
+  const response = await fetch(`${API_URL}/${encodeURIComponent(paymentId)}`, {
+    method: 'GET',
+    headers: { Authorization: `Basic ${auth}` },
+    cache: 'no-store',
+  })
+
+  if (!response.ok) return null
+
+  const result = (await response.json()) as {
+    id?: string
+    status?: string
+    metadata?: Record<string, string>
+  }
+
+  if (!result.id || !result.status) return null
+
+  return {
+    id: result.id,
+    status: result.status,
+    metadata: result.metadata ?? {},
+  }
+}
+
 /**
  * Создаёт платёж и возвращает ссылку на страницу оплаты.
  *

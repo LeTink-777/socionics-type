@@ -74,6 +74,44 @@ export function useStoredData(): StoredData | null {
   )
 }
 
+/* --- Оформленный заказ --- */
+
+const PENDING_ORDER_KEY = 'socionics_pending_order'
+
+export type PendingOrder = {
+  plan: string
+  /** Нужен /api/generate-pdf, чтобы подтвердить оплату перед выдачей PDF. */
+  paymentId: string | null
+}
+
+/** Переживает переход на страницу оплаты ЮKassa и обратно. */
+export function savePendingOrder(order: PendingOrder): void {
+  try {
+    window.localStorage.setItem(PENDING_ORDER_KEY, JSON.stringify(order))
+  } catch {
+    // Разбор всё равно уходит письмом, даже если браузер ничего не сохранил.
+  }
+}
+
+export function readPendingOrder(): PendingOrder | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(PENDING_ORDER_KEY)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as Partial<PendingOrder>
+    if (typeof parsed?.plan !== 'string') return null
+
+    return {
+      plan: parsed.plan,
+      paymentId: typeof parsed.paymentId === 'string' ? parsed.paymentId : null,
+    }
+  } catch {
+    return null
+  }
+}
+
 /* --- Счётчик оставшихся мест на тарифе Эксперт --- */
 
 const SPOTS_KEY = 'socionics_spots'
