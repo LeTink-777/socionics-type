@@ -1,26 +1,141 @@
 @import "tailwindcss";
 
+/*
+ * Clean Scientific — светлая клиническая палитра с тёплым бирюзовым акцентом.
+ * Тема намеренно однорежимная: страница диагностики должна выглядеть одинаково
+ * у всех, поэтому prefers-color-scheme не переопределяет токены.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #f7f9fc;
+  --bg-secondary: #eef2f8;
+  --bg-card: #ffffff;
+  --bg-dark: #1a2332;
+
+  --accent-teal: #0f7b7b;
+  --accent-teal-dark: #0b5f5f;
+  --accent-teal-light: #e8f5f5;
+  --accent-coral: #e85d4a;
+  --accent-gold: #f0a500;
+
+  --text-primary: #1a2332;
+  --text-secondary: #4a5568;
+  --text-muted: #8a94a6;
+
+  --border: #dde3ed;
+  --shadow: 0 4px 24px rgba(15, 123, 123, 0.08);
+  --shadow-lg: 0 12px 40px rgba(15, 123, 123, 0.14);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-dark: var(--bg-dark);
+  --color-teal: var(--accent-teal);
+  --color-teal-dark: var(--accent-teal-dark);
+  --color-teal-light: var(--accent-teal-light);
+  --color-coral: var(--accent-coral);
+  --color-gold: var(--accent-gold);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+
+  --font-display: var(--font-montserrat);
+  --font-body: var(--font-source-serif);
+  --font-mono: var(--font-jetbrains);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-source-serif), Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+button,
+label {
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+}
+
+/* Тап-таргеты на мобильных: минимум 52px по требованию макета. */
+button,
+a[role="button"] {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 2px;
+}
+
+/* Ползунок выбора тарифа. Стилизуется в обоих движках отдельно. */
+.value-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.value-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track-fill, var(--border));
+}
+
+.value-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track-fill, var(--border));
+}
+
+.value-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  margin-top: -13px;
+  border-radius: 999px;
+  background: var(--accent-teal);
+  border: 4px solid #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 123, 123, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.value-slider::-moz-range-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--accent-teal);
+  border: 4px solid #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 123, 123, 0.4);
+}
+
+.value-slider:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
