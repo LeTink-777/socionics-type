@@ -21,14 +21,28 @@ function text(value: unknown, max = 200): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
 }
 
+/**
+ * Хосты, на которые разрешено возвращать покупателя после оплаты.
+ * Всё остальное (в том числе подменённый заголовок Host) уходит на SITE_URL,
+ * чтобы ссылку возврата нельзя было увести на чужой домен.
+ */
+const ALLOWED_HOSTS = new Set([
+  'www.psikhotip.online',
+  'psikhotip.online',
+  'socionics-type.vercel.app',
+  'localhost:3000',
+  '127.0.0.1:3000',
+])
+
 /** Куда ЮKassa возвращает покупателя после оплаты. */
 function originFrom(request: Request): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL
-  if (configured) return configured.replace(/\/$/, '')
+  const host = request.headers.get('host')?.toLowerCase()
 
-  const host = request.headers.get('host')
-  if (host && /^[a-z0-9.-]+$/i.test(host)) {
-    return `https://${host.toLowerCase()}`
+  if (host && ALLOWED_HOSTS.has(host)) {
+    const scheme = host.startsWith('localhost') || host.startsWith('127.0.0.1')
+      ? 'http'
+      : 'https'
+    return `${scheme}://${host}`
   }
 
   return SITE_URL

@@ -1,6 +1,7 @@
+/** Канонический origin: www, без завершающего слэша. Апекс редиректится на него. */
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
-  'https://socionics-type.vercel.app'
+  'https://www.psikhotip.online'
 
 export const SITE_NAME = 'Соционика'
 
